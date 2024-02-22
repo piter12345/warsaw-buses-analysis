@@ -1,17 +1,18 @@
 # warsaw-buses-analysis
 
-TODO:
+## Downloading data
 
-* speeding
+To download data run in data_fetch folder the following scripts.
+```bash
+python3 bus_speeding.py
+```
+and 
+```bash
+python3 bus_schedule.py
+```
 
-* punctuality
+The data will be saved in data folder with current timestamp in filename.
 
-* visualisations
+## Analysis
 
-* pylint
-
-* tests(?)
-
-* pip install
-
-* own analysis
+Run data_analysis/analysis.ipynb notebook to see & modify analysis of the downloaded data.
