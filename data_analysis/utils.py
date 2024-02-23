@@ -3,18 +3,28 @@ Module with analysis utils
 """
 from datetime import datetime, timedelta
 from math import radians, sin, cos, sqrt, atan2
-from geopy.distance import geodesic
 
 BUS_DATA_MEASUREMENT_TIME = timedelta(hours=1)
 
 EPS = 200.0
 
 def haversine_distance(coord1, coord2):
+    """
+    Calculate the haversine distance between two coordinates.
+
+    Parameters:
+    - coord1 (tuple): A tuple containing latitude and longitude for the first point.
+    - coord2 (tuple): A tuple containing latitude and longitude for the second point.
+
+    Returns:
+    - float: The distance in meters.
+    """
+
     lat1, lon1 = coord1
     lat2, lon2 = coord2
     lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
     # Radius of the Earth in kilometers
-    R = 6371.0
+    radius = 6371.0
 
     # Convert latitude and longitude from degrees to radians
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
@@ -24,11 +34,11 @@ def haversine_distance(coord1, coord2):
     dlon = lon2 - lon1
 
     # Haversine formula
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    a_var = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c_var = 2 * atan2(sqrt(a_var), sqrt(1 - a_var))
 
     # Distance in kilometers
-    distance = R * c
+    distance = radius * c_var
 
     return distance * 1000.0
 
@@ -58,7 +68,7 @@ def get_time(bus):
 
 def calculate_distance(coord1, coord2):
     """
-    Calculate the distance between two coordinates using geodesic distance.
+    Calculate the distance between two coordinates.
 
     Parameters:
     - coord1 (tuple): A tuple containing latitude and longitude for the first point.

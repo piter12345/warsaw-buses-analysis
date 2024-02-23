@@ -1,45 +1,57 @@
+"""
+This module provides scripts for analysis of punctuality.
+"""
+
+import os
 import json
 from datetime import datetime, timedelta
-import pandas as pd
 from tqdm import tqdm
 
-from utils import get_time, get_coords, validate_datetime_format, validate_time_format, is_at_stop, BUS_DATA_MEASUREMENT_TIME
-
-
-filepath_morning = "../data/bus-locations-2024-02-19 09:35:12.222315.json"
-filepath_evening = "../data/bus-locations-2024-02-18 20:29:31.691732.json"
-
-timestamp_morning = datetime.strptime("2024-02-19 09:35:12", '%Y-%m-%d %H:%M:%S')
-timestamp_evening = datetime.strptime("2024-02-18 20:29:31", '%Y-%m-%d %H:%M:%S')
-download_time = timestamp_morning
+from utils import get_time, get_coords, validate_datetime_format,\
+                  validate_time_format, is_at_stop, BUS_DATA_MEASUREMENT_TIME
 
 
 def get_buses_data(filepath):
+    """
+    Reads buses data from filepath.
+    """
     with open(filepath, "r", encoding="utf-8") as json_file:
         buses_data = json.load(json_file)
 
     return buses_data
 
-def get_schedules():
-    filepath_schedules = "../data/bus-schedules.json"
+def get_schedules(data_dir):
+    """
+    Reads schedules data from data_dir/bus_schedules.json.
+    """
+    filepath_schedules = os.path.join(data_dir, "bus-schedules.json")
 
     with open(filepath_schedules, "r", encoding="utf-8") as json_file:
-            schedules_data = json.load(json_file)
-        
+        schedules_data = json.load(json_file)
+
     return schedules_data
 
-def get_bus_stops_locations():
-    filepath_bus_stops = "../data/bus-stops.json"
+def get_bus_stops_locations(data_dir):
+    """
+    Reads bus stops locations from data_dir/bus-stops.json.    
+    """
+    filepath_bus_stops = os.path.join(data_dir, "bus-stops.json")
 
     with open(filepath_bus_stops, "r", encoding="utf-8") as json_file:
         bus_stops_data = json.load(json_file)
 
-    bus_stops_to_locations = {(bus_stop["values"][0]["value"], bus_stop["values"][1]["value"]): (bus_stop["values"][4]["value"], bus_stop["values"][5]["value"]) for bus_stop in bus_stops_data["result"]}
+    bus_stops_to_locations = {(bus_stop["values"][0]["value"], bus_stop["values"][1]["value"]):
+                              (bus_stop["values"][4]["value"], bus_stop["values"][5]["value"])
+                              for bus_stop in bus_stops_data["result"]}
 
     return bus_stops_to_locations
 
-def get_bus_locations(buses_data):
-    buses = [bus["VehicleNumber"] for bus in buses_data if isinstance(bus, dict) and "VehicleNumber" in bus]
+def get_bus_locations(buses_data, download_time):
+    """
+    Gets bus lines locations based on live bus data.
+    """
+    buses = [bus["VehicleNumber"] for bus in buses_data
+             if isinstance(bus, dict) and "VehicleNumber" in bus]
     bus_lines = [bus["Lines"] for bus in buses_data if isinstance(bus, dict) and "Lines" in bus]
 
     print(f"skipped {len(buses_data) - len(buses)} elements out of {len(buses_data)}")
@@ -62,20 +74,23 @@ def get_bus_locations(buses_data):
 
     return bus_locations
 
-def calculate_delays(filepath):
+def calculate_delays(data_dir, filepath, download_time):
+    """
+    Calculates delays for buses and returns those that exceeded 2 minutes.
+    """
     buses_data = get_buses_data(filepath)
-    schedules_data = get_schedules()    
-    bus_stops_to_locations = get_bus_stops_locations()
-    bus_locations = get_bus_locations(buses_data)
+    schedules_data = get_schedules(data_dir)
+    bus_stops_to_locations = get_bus_stops_locations(data_dir)
+    bus_locations = get_bus_locations(buses_data, download_time)
 
     delayed_buses = []
     bus_lines_not_found = []
     not_arrived = 0
 
-    for id in tqdm(schedules_data):
-        bus_stop_id, bus_stop_nr, bus_line = id.split(',')
+    for sid in tqdm(schedules_data):
+        bus_stop_id, bus_stop_nr, bus_line = sid.split(',')
 
-        times = schedules_data[id]
+        times = schedules_data[sid]
         times = [datetime.strptime(time, '%H:%M:%S').time()
                 for time in times if validate_time_format(time)]
         times = [download_time.replace(
@@ -87,7 +102,7 @@ def calculate_delays(filepath):
 
         try:
             locations = bus_locations[bus_line]
-        except KeyError as e:
+        except KeyError:
             bus_lines_not_found.append(bus_line)
             continue
 
@@ -107,21 +122,3 @@ def calculate_delays(filepath):
            buses that did not arrive: {not_arrived}")
 
     return delayed_buses
-
-def save_data(delayed_buses):
-    filepath = f"delays.json"
-
-    def datetime_serializer(obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        elif isinstance(obj, (list, dict)):
-            return obj
-        else:
-            return str(obj)
-
-    json_data = json.dumps(delayed_buses, default=datetime_serializer, indent=2)
-
-    with open(filepath, "w") as json_file:
-        json_file.write(json_data)
-
-
