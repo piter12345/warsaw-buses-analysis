@@ -9,7 +9,7 @@ from datetime import datetime
 import folium
 from folium.plugins import HeatMap
 
-from utils import calculate_speed, validate_time_format
+from utils import calculate_speed, validate_datetime_format
 
 
 SPEED_LIMIT = 50.0
@@ -29,7 +29,7 @@ def parse_data(filepath):
         data = json.load(json_file)
 
     buses_list = [bus_data for bus_data in data
-                  if isinstance(bus_data, dict) and validate_time_format(bus_data['Time'])]
+                  if isinstance(bus_data, dict) and validate_datetime_format(bus_data['Time'])]
 
     print(f"skipped {len(data) - len(buses_list)} elements out of {len(data)}")
 

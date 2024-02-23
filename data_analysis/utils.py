@@ -1,8 +1,36 @@
 """
 Module with analysis utils
 """
-from datetime import datetime
+from datetime import datetime, timedelta
+from math import radians, sin, cos, sqrt, atan2
 from geopy.distance import geodesic
+
+BUS_DATA_MEASUREMENT_TIME = timedelta(hours=1)
+
+EPS = 200.0
+
+def haversine_distance(coord1, coord2):
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+    # Radius of the Earth in kilometers
+    R = 6371.0
+
+    # Convert latitude and longitude from degrees to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    # Calculate the differences between the coordinates
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    # Haversine formula
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    # Distance in kilometers
+    distance = R * c
+
+    return distance * 1000.0
 
 def get_coords(bus):
     """
@@ -39,7 +67,8 @@ def calculate_distance(coord1, coord2):
     Returns:
     - float: The distance in meters.
     """
-    return abs(geodesic(coord1, coord2).meters)
+    # return abs(geodesic(coord1, coord2).meters)
+    return haversine_distance(coord1, coord2)
 
 def calculate_speed(bus_data1, bus_data2):
     """
@@ -60,9 +89,9 @@ def calculate_speed(bus_data1, bus_data2):
     speed_kmph = speed_mps * 3.6
     return speed_kmph
 
-def validate_time_format(time_str):
+def validate_datetime_format(datetime_str):
     """
-    Validate if the input time string is in the format '%Y-%m-%d %H:%M:%S'.
+    Validate if the input datetime string is in the format '%Y-%m-%d %H:%M:%S'.
 
     Parameters:
     - time_str (str): A string representing a time in the specified format.
@@ -71,7 +100,36 @@ def validate_time_format(time_str):
     - bool: True if the format is valid, False otherwise.
     """
     try:
-        datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+        datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
         return True
     except ValueError:
         return False
+
+def validate_time_format(time_str):
+    """
+    Validate if the input time string is in the format '%H:%M:%S'.
+
+    Parameters:
+    - time_str (str): A string representing a time in the specified format.
+
+    Returns:
+    - bool: True if the format is valid, False otherwise.
+    """
+    try:
+        datetime.strptime(time_str, '%H:%M:%S')
+        return True
+    except ValueError:
+        return False
+
+def is_at_stop(bus_loc, bus_stop_loc):
+    """
+    Check if the bus is at the bus stop.
+
+    Parameters:
+    - bus_loc (tuple[float, float]): Geographical coordinates of bus location
+    - bus_stop_loc (tuple[float, float]): Geographical coordinates of bus stop location
+
+    Returns:
+    - bool: True if the bus is close to the bus stop, False otherwise.
+    """
+    return calculate_distance(bus_loc, bus_stop_loc) < EPS
